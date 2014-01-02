@@ -2,6 +2,7 @@ import socket
 import select
 import sys
 import thread
+import time
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 class Server:
@@ -36,7 +37,7 @@ class Server:
 		self.broad_cast(client,"Left Chat Room")
 
 	def send_group(self,client,msg):
-		msg = "[ %s ] : " % (client.username) + msg
+		msg = "%s : " % (client.username) + msg
 		for cl in self.threads:
 			if cl != client:
 				cl.hear(msg)
@@ -48,25 +49,40 @@ class Server:
 			if cl != client:
 				cl.hear(msg)
 
+	def server_message(self,msg):
+		for cl in self.threads:
+			cl.hear(msg)
+
+	def close(self):
+		self.server_message("Disconnected from server")
+		self.server.close()
+		for c in self.threads:
+			c.client.close()
+			del c
+
 	def run(self):
+		print "Server ChatUs running..."
 		self.open_socket()
 		input  = [self.server]
 		running = 1
-		while running:
-			inputready , outputready , exceptready = select.select(input,[],[])
-			for s in inputready:
-				if s == self.server:
-					c = Client(self.server.accept())
-					c.spoke = self.send_group
-					c.disconnect = self.disconnect
-					c.username = c.client.recv(4096)
-					self.clients[c.username] = c
-					self.threads.append(c)
-					self.broad_cast(c,"Entered Chat Room")
-
-		self.server.close()
-		for c in self.threads:
-			c.join()
+		try:
+			while running:
+				inputready , outputready , exceptready = select.select(input,[],[])
+				for s in inputready:
+					if s == self.server:
+						c = Client(self.server.accept())
+						c.spoke = self.send_group
+						c.disconnect = self.disconnect
+						c.username = c.client.recv(4096)
+						self.clients[c.username] = c
+						self.threads.append(c)
+						self.broad_cast(c,"Entered Chat Room")
+		except KeyboardInterrupt:
+			server_message("\nDisconnected from server...")
+			self.server.close()
+			for c in self.threads:
+				c.client.close()
+				c.join()
 
 
 class Client():
@@ -96,16 +112,20 @@ class Client():
 				self.client.close()
 				running = 0
 
-s = Server()
-thread.start_new_thread(s.run,())
 
-def print_user():
-	return s.clients.keys()
-xmlserver = SimpleXMLRPCServer(("localhost",5001))
-xmlserver.register_function(print_user,"list_user")
-xmlserver.serve_forever()
-
-
-
-
-
+if __name__ == '__main__':
+	s = Server()
+	try:
+		thread.start_new_thread(s.run,())
+	except KeyboardInterrupt:
+		print "ulala"
+	def print_user():
+		return s.clients.keys()
+	xmlserver = SimpleXMLRPCServer(("localhost",5001))
+	xmlserver.register_function(print_user,"list_user")
+	try:
+		xmlserver.serve_forever()
+	except KeyboardInterrupt:
+		print "\nServer ChatUs stopped..."
+		time.sleep(2)
+		s.close()

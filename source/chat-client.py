@@ -18,51 +18,61 @@ def login(username):
 	os.system("clear")
 	print "Welcome to ChatUs %s !" % (username)
 	c = ChatClient()
-	c.connect(username)
-	while True:
-		msg = raw_input()
+	if c.connect(username):
 		try:
-			cmd , msg = filter_message(msg)
-			if(cmd==-1): 
-				c.disconnect()
-				os.system("clear")
-				print "Disconnecting..."
-				time.sleep(2)
-				break
-			else:
-				c.say(msg)
-		except:
-			print "Disconnected from server!"
-			break
+			while c.connected == 1:
+				msg = raw_input()
+				print "\033[A                             \033[A"
+				print "<You> : " + msg
+				try:
+					cmd , msg = filter_message(msg)
+					if(cmd==-1): 
+						c.disconnect()
+						clear_screen("Disconnecting...")
+						break
+					else:
+						c.say(msg)
+				except:
+					break
+		except KeyboardInterrupt:
+			c.disconnect()
+			clear_screen("Disconnecting...")
+	else:
+		clear_screen("Server is offline")
+
+def clear_screen(message):
+	os.system("clear")
+	print message
+	time.sleep(2)
 
 
 if __name__ == '__main__':
-	cmd = 0
-	proxy = xmlrpclib.ServerProxy("http://localhost:5001/")
-	while cmd == 0:
+	try:
+		proxy = xmlrpclib.ServerProxy("http://localhost:5001/")
+	except:
+		pass
+	while True:
 		cmd = MenuForm()
 		if cmd == '1':
 			username , password = LoginForm()
 			if CheckPassword((username,password)) == 1:
-				if username in proxy.list_user():
-					os.system("clear")
-					print "Username %s already logged in" % (username)
-					print time.sleep(2)
-					cmd = 0
-				else:
-					login(username)
-					cmd = 0
-					
+				try:
+					if username in proxy.list_user():
+						clear_screen("Username %s already logged in" % (username))
+					else:
+						login(username)
+				except:
+					clear_screen("Server is offline")
+					pass
+			else:
+				clear_screen("Invalid username or password")
+
 		elif cmd == '2':
 			InsertUser(RegisterForm())
-			cmd = 0
 		elif cmd == '3':
-			cmd = 0
-		elif cmd == '4':
 			pass
+		elif cmd == '4':
+			break
 		else:
-			cmd = 0
-			os.system("clear")
-			print "Not a valid command!"
-			print time.sleep(2)
+			clear_screen("Not a valid command")
 		os.system("clear")
