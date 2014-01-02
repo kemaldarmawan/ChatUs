@@ -1,12 +1,20 @@
-from database import *
-from menu import *
-from classclient import ChatClient
 import os
 import time
 import xmlrpclib
+import sys
+from database import *
+from menu import *
+from client import ChatClient
 
 
-def Login(username):
+def filter_message(msg):
+	if msg[0]=='~':
+		if(msg[1:].split(' ')[0]=='quit'):
+			return (-1 , 'disconnect')
+	else:
+		return (0,msg)
+
+def login(username):
 	os.system("clear")
 	print "Welcome to ChatUs %s !" % (username)
 	c = ChatClient()
@@ -14,12 +22,18 @@ def Login(username):
 	while True:
 		msg = raw_input()
 		try:
-			c.say(msg)
+			cmd , msg = filter_message(msg)
+			if(cmd==-1): 
+				c.disconnect()
+				os.system("clear")
+				print "Disconnecting..."
+				time.sleep(2)
+				break
+			else:
+				c.say(msg)
 		except:
 			print "Disconnected from server!"
-			sys.exit(1)
-
-
+			break
 
 
 if __name__ == '__main__':
@@ -36,18 +50,19 @@ if __name__ == '__main__':
 					print time.sleep(2)
 					cmd = 0
 				else:
-					Login(username)
+					login(username)
+					cmd = 0
 					
 		elif cmd == '2':
 			InsertUser(RegisterForm())
 			cmd = 0
 		elif cmd == '3':
 			cmd = 0
+		elif cmd == '4':
+			pass
 		else:
 			cmd = 0
 			os.system("clear")
 			print "Not a valid command!"
 			print time.sleep(2)
 		os.system("clear")
-
-

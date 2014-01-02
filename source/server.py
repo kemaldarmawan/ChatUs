@@ -30,6 +30,11 @@ class Server:
 			print "Could not open socket: " + message
 			sys.exit(1)
 
+	def disconnect(self,client):
+		self.threads.remove(client)
+		del self.clients[client.username]
+		self.broad_cast(client,"Left Chat Room")
+
 	def send_group(self,client,msg):
 		msg = "[ %s ] : " % (client.username) + msg
 		for cl in self.threads:
@@ -38,6 +43,7 @@ class Server:
 
 	def broad_cast(self,client,msg):
 		msg = "(~SERVER~) : User %s %s" % (client.username,msg)
+		print msg
 		for cl in self.threads:
 			if cl != client:
 				cl.hear(msg)
@@ -52,11 +58,11 @@ class Server:
 				if s == self.server:
 					c = Client(self.server.accept())
 					c.spoke = self.send_group
+					c.disconnect = self.disconnect
 					c.username = c.client.recv(4096)
 					self.clients[c.username] = c
 					self.threads.append(c)
-					self.broad_cast(c,"Entered Room")
-					print "(~ChatUs~) : User %s Entered Room" % (c.username)
+					self.broad_cast(c,"Entered Chat Room")
 
 		self.server.close()
 		for c in self.threads:
@@ -71,6 +77,7 @@ class Client():
 		self.username = ''
 		self.spoke = None
 		self.commanded = None
+		self.disconnect = None
 		self.speaker = thread.start_new_thread(self.__speak__,())
 
 	def hear(self,msg):
@@ -81,7 +88,10 @@ class Client():
 		while running:
 			data = self.client.recv(self.size)
 			if data:
-				self.spoke(self,data)
+				if data == "@disconnect":
+					self.disconnect(self)
+				else:
+					self.spoke(self,data)
 			else:
 				self.client.close()
 				running = 0
