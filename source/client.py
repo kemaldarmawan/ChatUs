@@ -9,6 +9,7 @@ class ChatClient:
 		self.mxbf = 4096
 		self.sock = None
 		self.connected = 0
+		self.username = ''
 
 	def connect(self,username):
 		try:
@@ -16,6 +17,7 @@ class ChatClient:
 			self.sock.connect(self.address)
 			self.connected = 1
 			self.sock.send(username)
+			self.username = self.sock.recv(4096)
 			self.listener = thread.start_new_thread(self.__listen__,())
 			return 1
 		except:

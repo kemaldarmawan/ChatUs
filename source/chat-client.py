@@ -4,6 +4,8 @@ import xmlrpclib
 import sys
 import Tkinter
 import tkFileDialog
+import thread
+import signal
 from database import *
 from menu import *
 from client import ChatClient
@@ -14,7 +16,7 @@ def print_list():
 	users = proxy.list_user()
 	print bcolors.warning_message("~ChatUs~ :")
 	for user in users:
-		print bcolors.warning_message("* %s" % user)
+		print bcolors.whisper_message("* %s" % user)
 	print bcolors.warning_message("%s user(s) online" % (str(len(users))))
 	print bcolors.warning_message("-------------------")
 
@@ -45,12 +47,19 @@ def filter_message(msg):
 	else:
 		return (0,msg)
 
+
+def signal_handler(signal,frame):
+	c.disconnect()
+	sys.exit(0)
+
 def login(username):
 	os.system("clear")
-	print "Welcome to ChatUs %s !" % (username)
 	c = ChatClient()
+
 	if c.connect(username):
+		sys.stdout.write("\x1b]2;%s\x07" % (c.username))
 		try:
+
 			while c.connected == 1:
 				msg = raw_input()
 				msg = msg.strip()
@@ -59,18 +68,18 @@ def login(username):
 					continue
 				try:
 					cmd , temp = filter_message(msg)
-					if cmd==-2: 
+					if cmd==-2:
 						c.disconnect()
 						clear_screen("Disconnecting...")
 						break
 					elif cmd==1:
 						if len(msg.split(' ')) == 1:
-							print bcolors.warning_message("~ChatUs~ : user %s is online" % (temp))
+							print bcolors.warning_message("~ChatUs~ : ") + bcolors.whisper_message("user %s is online" % (temp))
 						else:
 							print bcolors.whisper_message("<You> : %s" % (msg))
 							c.say(msg)
 					elif cmd==-1:
-						print bcolors.warning_message("~ChatUs~ : user %s is offline" % (temp))
+						print bcolors.warning_message("~ChatUs~ : ") + bcolors.fail_message("user %s is offline" % (temp))
 					elif cmd==2:
 						print_list()
 					else:
@@ -79,6 +88,7 @@ def login(username):
 							c.say(msg)
 				except:
 					break
+
 		except KeyboardInterrupt:
 			c.disconnect()
 			clear_screen("Disconnecting...")
@@ -92,12 +102,15 @@ def clear_screen(message):
 
 
 if __name__ == '__main__':
+	c = None
 	try:
 		proxy = xmlrpclib.ServerProxy("http://localhost:5001/")
 	except:
 		pass
 	try:
+		signal.signal(signal.SIGHUP , signal_handler)
 		while True:
+			sys.stdout.write("\x1b]2;ChatUs\x07")
 			cmd = MenuForm()
 			if cmd == '1':
 				username , password = LoginForm()
@@ -116,11 +129,13 @@ if __name__ == '__main__':
 			elif cmd == '2':
 				InsertUser(RegisterForm())
 			elif cmd == '3':
-				pass
+				login("guest\r\n")
 			elif cmd == '4':
 				break
 			else:
 				clear_screen("Not a valid command")
+
+		signal.pause()
 	except KeyboardInterrupt:
 		clear_screen("Exiting ChatUs...")
 		os.system("clear")
