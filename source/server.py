@@ -122,6 +122,28 @@ class Server:
 		self.guest_number += 1
 		return "Guest" + str(self.guest_number)
 
+	def send_file(self,client,data):
+		if client.isguest == 1:
+			self.server_message(client.username,bcolors.fail_message("You must login to send a file !"))
+		else:
+			self.send_group(client,"Send a file")
+			for cl in self.threads:
+				if cl != client:
+					cl.hear(data)
+
+	def send_file_to(self,client,data):
+		if client.isguest == 1:
+			self.server_message(client.username,bcolors.fail_message("You must login to send a file !"))
+		else:
+			username = data.split("\r\n")[1].split("\r\n\r\n")[0]
+			#print username
+			data = data.replace("fileto","file")
+			data = data.replace(username+"\r\n\r\n","")
+			#print data[:20]
+			self.whisper(client,username,"Send a file")
+			self.clients[username].hear(data)
+
+
 	def run(self):
 		os.system("clear")
 		print "Server ChatUs starting..."
@@ -139,6 +161,8 @@ class Server:
 						c.spoke = self.send_group
 						c.disconnect = self.disconnect
 						c.wisp = self.whisper
+						c.sendfile = self.send_file
+						c.sendfileto = self.send_file_to
 						temp = c.client.recv(4096)
 						if temp == "guest\r\n":
 							temp = self.get_guest_username()
@@ -170,6 +194,7 @@ class Client():
 		self.wisp = None
 		self.commanded = None
 		self.disconnect = None
+		self.sendfile = None
 		self.isguest = 0
 		self.speaker = thread.start_new_thread(self.__speak__,())
 
@@ -186,9 +211,28 @@ class Client():
 				elif "@" in data[0]:
 					data = data[1:]
 					self.wisp(self,data.split(' ')[0],data[data.find(" ")+1:])
+				elif "file\r\n" in data:
+					file_data = data
+					if "\r\n\r\n\r\n" not in file_data:
+						while True:
+							_data = self.client.recv(self.size)
+							file_data += _data
+							if "\r\n\r\n\r\n" in _data:
+								break
+					self.sendfile(self,file_data)
+				elif "fileto\r\n" in data:
+					file_data = data
+					if "\r\n\r\n\r\n" not in file_data:
+						while True:
+							_data = self.client.recv(self.size)
+							file_data += _data
+							if "\r\n\r\n\r\n" in _data:
+								break
+					self.sendfileto(self,file_data)
 				else:
 					self.spoke(self,data)
 			else:
+				self.disconnect(self)
 				self.client.close()
 				running = 0
 

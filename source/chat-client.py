@@ -30,14 +30,43 @@ def filter_message(msg):
 				root = Tkinter.Tk()
 				root.withdraw()
 				file_path = ''
-				file_path = tkFileDialog.askopenfilename()
-				return (3,file_path)
+				try:
+					file_path = tkFileDialog.askopenfilename()
+				except:
+					print "jir masuk"
+					pass
+				file_ = ''
+				if file_path:
+					file_name = file_path[file_path.rfind("/")+1:]
+					#print file_name
+					try :
+						file_data = open(file_path,"r").read()
+						file_ = "file\r\n"+file_name+"\r\n\r\n"+str(len(file_data))+"\r\n\r\n"+file_data+"\r\n\r\n\r\n"
+					except:
+						pass
+				return (3,file_)
 			elif msg[1:].split(' ')[0]=='whosonline':
 				return (2,"user online")
 			else:
 				return (0,msg)
 		elif msg[0]=='@':
 			if len(msg)>1 and msg[1:].split(' ')[0] in proxy.list_user():
+				if len(msg.split(" ")) > 1 and msg.split(" ")[1] == "~file":
+					file_path = ''
+					try:
+						root = Tkinter.Tk()
+						root.withdraw()
+						file_path = tkFileDialog.askopenfilename()
+					except:
+						file_path = ''
+					file_ = ''
+					if file_path:
+						file_name = file_path[file_path.rfind("/")+1:]
+						file_to = msg[1:].split(" ")[0]
+						#print file_name
+						file_data = open(file_path,"r").read()
+						file_ = "fileto\r\n"+file_to+"\r\n\r\n"+file_name+"\r\n\r\n"+str(len(file_data))+"\r\n\r\n"+file_data+"\r\n\r\n\r\n"
+					return (11,file_)
 				return (1,msg.split("@")[1])
 			elif len(msg)>1 and msg[1:].split(' ')[0] not in proxy.list_user():
 				return (-1,msg.split("@")[1])
@@ -78,10 +107,16 @@ def login(username):
 						else:
 							print bcolors.whisper_message("<You> : %s" % (msg))
 							c.say(msg)
+					elif cmd==11:
+						c.say(temp)
+						print bcolors.whisper_message("<You> : Send file to %s" % (msg))
 					elif cmd==-1:
 						print bcolors.warning_message("~ChatUs~ : ") + bcolors.fail_message("user %s is offline" % (temp))
 					elif cmd==2:
 						print_list()
+					elif cmd==3:
+						if temp != '':
+							c.say(temp)
 					else:
 						if(len(msg)>=1):
 							print bcolors.normal_message("<You> : %s" % (msg))
